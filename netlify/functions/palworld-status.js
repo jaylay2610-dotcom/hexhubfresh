@@ -1,10 +1,17 @@
-export async function handler() {
+// If on Node 16 or lower, uncomment the next line:
+// import fetch from 'node-fetch';
+
+export async function handler(event, context) {
   try {
     const token = process.env.NITRADO_TOKEN;
     const serviceId = process.env.NITRADO_SERVICE_ID;
     if (!token || !serviceId) {
       return {
         statusCode: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*", // CORS
+        },
         body: JSON.stringify({ error: "Missing NITRADO_TOKEN or NITRADO_SERVICE_ID environment variables." }),
       };
     }
@@ -14,7 +21,6 @@ export async function handler() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Handle HTTP/network errors
     if (!r.ok) {
       let errBody;
       try {
@@ -24,19 +30,21 @@ export async function handler() {
       }
       return {
         statusCode: r.status,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*", // CORS
+        },
         body: JSON.stringify({ error: "Nitrado API error", details: errBody }),
       };
     }
 
     const json = await r.json();
 
-    // Log the raw response for debugging (remove in prod if needed)
+    // Uncomment for debugging:
     // console.log("Nitrado API response:", JSON.stringify(json));
 
-    // Safely find the gameserver object
     const gs = json?.data?.gameserver || json?.data?.game_server || json?.data || {};
 
-    // Extract status with fallback
     const rawStatus = String(gs?.status ?? gs?.status_human ?? gs?.query_status ?? "").toLowerCase();
     const map = {
       started: "Online",
@@ -50,7 +58,6 @@ export async function handler() {
     };
     const status = map[rawStatus] || "Unknown";
 
-    // Extract player info with robust fallbacks
     const players =
       gs?.player_current ??
       gs?.players ??
@@ -69,6 +76,7 @@ export async function handler() {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*", // CORS
       },
       body: JSON.stringify({
         status,
@@ -78,9 +86,12 @@ export async function handler() {
       }),
     };
   } catch (e) {
-    // More verbose error output for debugging
     return {
       statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*", // CORS
+      },
       body: JSON.stringify({
         error: e.message,
         stack: process.env.NODE_ENV === "development" ? e.stack : undefined,
