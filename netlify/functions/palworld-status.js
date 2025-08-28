@@ -1,6 +1,3 @@
-// If on Node 16 or lower, uncomment the next line:
-// import fetch from 'node-fetch';
-
 export async function handler(event, context) {
   try {
     const token = process.env.NITRADO_TOKEN;
